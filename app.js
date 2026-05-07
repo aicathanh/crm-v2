@@ -6,6 +6,7 @@ const STATUS_MAP = { 'quote': 'Báo Giá', 'ordered': 'Chốt Đơn', 'paid': 'T
 const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'paid', 'archived': 'quote' };
 
 let currentMoveData = null;
+const THE_PASSWORD = "6688"; // Mật khẩu truy cập
 
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
@@ -120,96 +121,62 @@ function updateColumnStats() {
     });
 }
 
-// CUSTOMER MANAGEMENT
 async function openCustomerList() {
     const orders = await fetchOrders();
     const customers = {};
     orders.forEach(o => {
         const key = o.customer_phone || o.customer_name;
-        if (!customers[key]) {
-            customers[key] = { name: o.customer_name, phone: o.customer_phone, address: o.customer_address, total: 0, count: 0 };
-        }
+        if (!customers[key]) customers[key] = { name: o.customer_name, phone: o.customer_phone, address: o.customer_address, total: 0, count: 0 };
         customers[key].total += parseFloat(o.amount || 0);
         customers[key].count += 1;
     });
-
     const tbody = document.getElementById('customer-table-body');
     tbody.innerHTML = Object.values(customers).sort((a,b) => b.total - a.total).map(c => `
-        <tr>
-            <td style="font-weight:600;">${c.name}</td>
-            <td>${c.phone || 'N/A'}</td>
-            <td style="font-size:0.8rem; max-width:200px;">${c.address || 'N/A'}</td>
-            <td style="font-weight:700; color:#166534;">${formatVND(c.total)}</td>
-            <td style="text-align:center;">${c.count}</td>
-        </tr>
+        <tr><td style="font-weight:600;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.8rem; max-width:200px;">${c.address || 'N/A'}</td><td style="font-weight:700; color:#166534;">${formatVND(c.total)}</td><td style="text-align:center;">${c.count}</td></tr>
     `).join('');
-
     document.getElementById('customer-modal').classList.add('active');
     lucide.createIcons();
 }
 
 function exportToExcel() {
-    const tbody = document.getElementById('customer-table-body');
-    const rows = tbody.querySelectorAll('tr');
-    let csv = '\uFEFF'; // UTF-8 BOM for Excel
-    csv += 'Họ tên,Số điện thoại,Địa chỉ,Tổng mua,Số đơn\n';
-    
-    rows.forEach(row => {
-        const cols = row.querySelectorAll('td');
-        const data = Array.from(cols).map(c => `"${c.innerText.replace(/"/g, '""')}"`);
-        csv += data.join(',') + '\n';
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const rows = document.getElementById('customer-table-body').querySelectorAll('tr');
+    let csv = '\uFEFFHọ tên,Số điện thoại,Địa chỉ,Tổng mua,Số đơn\n';
+    rows.forEach(row => { csv += Array.from(row.querySelectorAll('td')).map(c => `"${c.innerText.replace(/"/g, '""')}"`).join(',') + '\n'; });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Danh_sach_khach_hang_${new Date().toLocaleDateString('vi-VN')}.csv`;
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    link.download = `Khach_hang_${new Date().toLocaleDateString('vi-VN')}.csv`;
     link.click();
 }
 
-// DASHBOARD
 async function openDashboard() {
     const orders = await fetchOrders();
     const yFilter = document.getElementById('year-filter');
     const currentYear = new Date().getFullYear();
     const years = new Set([currentYear]); orders.forEach(o => years.add(new Date(o.created_at).getFullYear()));
-    const sortedYears = Array.from(years).sort((a,b) => b-a);
-    yFilter.innerHTML = sortedYears.map(y => `<option value="${y}">Năm ${y}</option>`).join('');
+    yFilter.innerHTML = Array.from(years).sort((a,b) => b-a).map(y => `<option value="${y}">Năm ${y}</option>`).join('');
 
     const month = document.getElementById('month-filter').value;
     const year = yFilter.value;
-    
-    // Active Stats
     const active = orders.filter(o => o.status === 'paid' || o.status === 'debt');
     const activeData = calculateStats(active);
     const activeDebt = active.filter(o => o.status === 'debt').reduce((s, o) => s + parseFloat(o.amount || 0), 0);
     
     document.getElementById('active-account-stats').innerHTML = `
-        <div style="flex:1; text-align:center; border-right:1px solid #eee;">
-            <div style="font-size:0.7rem; color:#64748b;">TỔNG DOANH SỐ HIỆN TẠI</div>
-            <div style="font-size:1.1rem; font-weight:800;">${formatVND(activeData.totalRevenue)}</div>
-        </div>
+        <div style="flex:1; text-align:center; border-right:1px solid #eee;"><div>TỔNG DOANH SỐ HIỆN TẠI</div><strong>${formatVND(activeData.totalRevenue)}</strong></div>
         <div style="flex:2; display:flex; justify-content:space-around;">
-            <div style="text-align:center;"><small>CÔNG TY</small><br><span style="color:#2563eb; font-weight:700;">${formatVND(activeData.accountMap['Công ty'])}</span></div>
-            <div style="text-align:center;"><small>THANH</small><br><span style="color:#059669; font-weight:700;">${formatVND(activeData.accountMap['Thanh'])}</span></div>
-            <div style="text-align:center;"><small style="color:red;">ĐANG NỢ</small><br><span style="color:red; font-weight:700;">${formatVND(activeDebt)}</span></div>
+            <div>CÔNG TY<br><span style="color:#2563eb; font-weight:700;">${formatVND(activeData.accountMap['Công ty'])}</span></div>
+            <div>THANH<br><span style="color:#059669; font-weight:700;">${formatVND(activeData.accountMap['Thanh'])}</span></div>
+            <div style="color:red;">ĐANG NỢ<br><strong>${formatVND(activeDebt)}</strong></div>
         </div>
     `;
 
-    // Archived Stats
-    const archived = orders.filter(o => {
-        const d = new Date(o.created_at);
-        return o.status === 'archived' && d.getFullYear().toString() === year && (month === 'all' ? true : d.getMonth().toString() === month);
-    });
+    const archived = orders.filter(o => { const d = new Date(o.created_at); return o.status === 'archived' && d.getFullYear().toString() === year && (month === 'all' ? true : d.getMonth().toString() === month); });
     const archData = calculateStats(archived);
     document.getElementById('archived-account-stats').innerHTML = `
-        <div style="flex:1; text-align:center; border-right:1px solid #eee;">
-            <div style="font-size:0.7rem; color:#6366f1;">TỔNG LỊCH SỬ HOÀN THÀNH</div>
-            <div style="font-size:1.1rem; font-weight:800; color:#4338ca;">${formatVND(archData.totalRevenue)}</div>
-        </div>
+        <div style="flex:1; text-align:center; border-right:1px solid #eee;"><div>TỔNG LỊCH SỬ HOÀN THÀNH</div><strong>${formatVND(archData.totalRevenue)}</strong></div>
         <div style="flex:1; display:flex; justify-content:space-around;">
-            <div style="text-align:center;"><small>CÔNG TY</small><br><span style="font-weight:700;">${formatVND(archData.accountMap['Công ty'])}</span></div>
-            <div style="text-align:center;"><small>THANH</small><br><span style="font-weight:700;">${formatVND(archData.accountMap['Thanh'])}</span></div>
+            <div>CÔNG TY<br><strong>${formatVND(archData.accountMap['Công ty'])}</strong></div>
+            <div>THANH<br><strong>${formatVND(archData.accountMap['Thanh'])}</strong></div>
         </div>
     `;
 
@@ -233,8 +200,38 @@ function renderStatList(id, data) {
     document.getElementById(id).innerHTML = data.map(([n, v]) => `<div class="stat-item"><span>${n}</span><span class="stat-val">${formatVND(v)}</span></div>`).join('') || 'Trống';
 }
 
+// SECURITY LOGIC
+function checkAuth() {
+    if (localStorage.getItem('crm_auth') === 'true') {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('main-app').style.display = 'flex';
+        renderBoard();
+    }
+}
+
+function handleLogin() {
+    const input = document.getElementById('pass-input').value;
+    if (input === THE_PASSWORD) {
+        localStorage.setItem('crm_auth', 'true');
+        checkAuth();
+    } else {
+        document.getElementById('login-err').style.display = 'block';
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem('crm_auth');
+    location.reload();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    renderBoard();
+    lucide.createIcons();
+    checkAuth();
+
+    document.getElementById('login-btn').onclick = handleLogin;
+    document.getElementById('pass-input').onkeypress = (e) => { if (e.key === 'Enter') handleLogin(); };
+    document.getElementById('logout-btn').onclick = handleLogout;
+    
     document.getElementById('refresh-btn').onclick = renderBoard;
     document.getElementById('dashboard-btn').onclick = openDashboard;
     document.getElementById('customer-btn').onclick = openCustomerList;
