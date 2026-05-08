@@ -174,6 +174,32 @@ async function openCustomerList() {
         <tr><td style="font-weight:700;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.75rem;">${c.address || 'N/A'}</td><td style="font-weight:800; color:#166534;">${formatVND(c.total)}</td><td style="text-align:center;">${c.count}</td></tr>
     `).join('');
     document.getElementById('customer-modal').classList.add('active');
+    document.getElementById('export-btn').onclick = exportToExcel;
+}
+
+function exportToExcel() {
+    const table = document.querySelector('.data-table');
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    for (let i = 0; i < rows.length; i++) {
+        const cols = rows[i].querySelectorAll('td, th');
+        let row = [];
+        for (let j = 0; j < cols.length; j++) {
+            let text = cols[j].innerText.replace(/₫/g, '').replace(/\./g, '').trim();
+            if (i === 0) text = cols[j].innerText;
+            row.push('"' + text.replace(/"/g, '""') + '"');
+        }
+        csv.push(row.join(','));
+    }
+    const csvContent = "\uFEFF" + csv.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `DanhSachKhachHang_${new Date().toLocaleDateString('vi-VN')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function openDashboard() {
