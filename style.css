@@ -100,4 +100,44 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-app); color:
 @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
 .stat-card { background: white; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; }
 .stat-item { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 8px 0; border-bottom: 1px dashed #f1f5f9; }
+.btn-account { 
+    width: 100%; 
+    padding: 16px; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 12px; 
+    background: white; 
+    font-weight: 800; 
+    font-size: 1rem;
+    text-align: center; 
+    cursor: pointer; 
+    transition: all 0.2s;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-account.cty { border-color: #2563eb; color: #2563eb; }
+.btn-account.cty:active { background: #eff6ff; }
+.btn-account.thanh { border-color: #059669; color: #059669; }
+.btn-account.thanh:active { background: #f0fdf4; }
+
+.acc-toggle {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.acc-toggle.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
 .stat-val { font-weight: 800; color: var(--primary-color); }
+

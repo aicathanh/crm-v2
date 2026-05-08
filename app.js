@@ -35,7 +35,6 @@ async function deleteOrder(id) {
 }
 
 function handleStatusMove(id, newStatus, currentStatus = '') {
-    // Nếu chuyển từ Công nợ -> Lưu trữ HOẶC Chốt đơn -> Thu tiền thì đều hỏi tài khoản
     if (newStatus === 'paid' || (currentStatus === 'debt' && newStatus === 'archived')) {
         currentMoveData = { id, status: newStatus };
         document.getElementById('payment-modal').classList.add('active');
@@ -49,7 +48,7 @@ function createCard(order) {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = order.id;
-    card.dataset.status = order.status; // Lưu status hiện tại để xử lý logic
+    card.dataset.status = order.status;
     card.dataset.amount = order.amount || 0;
     card.dataset.name = (order.customer_name || '').toLowerCase();
     card.dataset.phone = (order.customer_phone || '').toLowerCase();
@@ -99,6 +98,15 @@ function showDetails(order) {
                 <a href="https://zalo.me/${order.customer_phone ? order.customer_phone.replace(/[^0-9]/g, '') : ''}" target="_blank" style="margin-left:8px; padding:3px 10px; background:#0068ff; color:white; border-radius:8px; font-size:0.7rem; text-decoration:none; font-weight:800; display:inline-flex; align-items:center;">Zalo</a>
             </p>
             <p><strong>Địa chỉ:</strong> ${order.customer_address || 'N/A'}</p>
+            
+            <div style="background:#f1f5f9; padding:12px; border-radius:12px;">
+                <p style="font-size:0.75rem; font-weight:800; color:#475569; margin-bottom:8px; text-transform:uppercase;">Tài khoản nhận tiền:</p>
+                <div style="display:flex; gap:8px;">
+                    <button class="acc-toggle ${order.payment_account === 'Công ty' ? 'active' : ''}" onclick="updatePaymentAccount('${order.id}', 'Công ty')">Công ty</button>
+                    <button class="acc-toggle ${order.payment_account === 'Thanh' ? 'active' : ''}" onclick="updatePaymentAccount('${order.id}', 'Thanh')">Thanh</button>
+                </div>
+            </div>
+
             <hr>
             <textarea id="order-notes" style="width:100%; height:80px; padding:12px; border-radius:10px; border:1px solid #ddd; font-family:inherit;" placeholder="Ghi chú thêm...">${order.notes || ''}</textarea>
             <button class="save-notes-btn" style="padding:12px; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Lưu ghi chú</button>
@@ -109,6 +117,18 @@ function showDetails(order) {
     `;
     document.querySelector('.save-notes-btn').onclick = () => updateNotes(order.id, document.getElementById('order-notes').value);
     modal.classList.add('active');
+    lucide.createIcons();
+}
+
+async function updatePaymentAccount(id, account) {
+    const { error } = await client.from('orders').update({ payment_account: account }).eq('id', id);
+    if (!error) {
+        // Cập nhật UI ngay lập tức trong modal
+        document.querySelectorAll('.acc-toggle').forEach(btn => {
+            btn.classList.toggle('active', btn.innerText === account);
+        });
+        renderBoard();
+    }
 }
 
 async function renderBoard() {
@@ -237,7 +257,6 @@ function initDragAndDrop() {
                 const newStatus = evt.to.closest('.column').dataset.status;
                 const oldStatus = evt.from.closest('.column').dataset.status;
                 if (newStatus !== oldStatus) {
-                    // CẬP NHẬT: Thêm logic hỏi tài khoản khi từ Công nợ -> Lưu trữ
                     if (newStatus === 'paid' || (oldStatus === 'debt' && newStatus === 'archived')) {
                         currentMoveData = { id, status: newStatus };
                         document.getElementById('payment-modal').classList.add('active');
