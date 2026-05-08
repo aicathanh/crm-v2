@@ -30,6 +30,7 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-app); color:
 
 /* Kanban Board */
 .board-container { flex: 1; overflow-x: auto; padding: 16px; scroll-snap-type: x mandatory; }
+.board-container.dragging { scroll-snap-type: none; }
 .board-wrapper { display: flex; gap: 16px; height: 100%; min-width: max-content; }
 .column { width: 300px; background: var(--bg-column); border-radius: var(--radius); display: flex; flex-direction: column; scroll-snap-align: start; border: 1px solid #e2e8f0; }
 .column-header { padding: 16px; background: rgba(255,255,255,0.5); border-radius: 16px 16px 0 0; }

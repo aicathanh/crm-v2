@@ -242,6 +242,7 @@ function handleLogin() {
 }
 
 function initDragAndDrop() {
+    const board = document.querySelector('.board-container');
     document.querySelectorAll('.cards-container').forEach(container => {
         new Sortable(container, {
             group: 'shared', animation: 250,
@@ -252,7 +253,12 @@ function initDragAndDrop() {
             swapThreshold: 0.65,
             ghostClass: 'sortable-ghost',
             dragClass: 'sortable-drag',
+            scroll: true,
+            scrollSensitivity: 100,
+            scrollSpeed: 20,
+            onStart: () => board.classList.add('dragging'),
             onEnd: async (evt) => {
+                board.classList.remove('dragging');
                 const id = evt.item.dataset.id;
                 const newStatus = evt.to.closest('.column').dataset.status;
                 const oldStatus = evt.from.closest('.column').dataset.status;
