@@ -6,6 +6,7 @@ const STATUS_MAP = { 'quote': 'Báo Giá', 'ordered': 'Chốt Đơn', 'paid': 'T
 const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'paid', 'archived': 'quote', 'lost': 'quote' };
 
 let currentMoveData = null;
+let selectedLostReason = "";
 const THE_PASSWORD = "6688";
 
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
@@ -24,8 +25,8 @@ async function updateNotes(id, notes) {
     const { error } = await client.from('orders').update({ notes }).eq('id', id);
     if (!error) {
         const btn = document.querySelector('.save-notes-btn');
-        btn.innerText = 'Đã lưu!';
-        setTimeout(() => { btn.innerText = 'Lưu ghi chú'; renderBoard(); }, 1500);
+        if (btn) btn.innerText = 'Đã lưu!';
+        setTimeout(() => { if (btn) btn.innerText = 'Lưu ghi chú'; renderBoard(); }, 1500);
     }
 }
 
@@ -58,7 +59,6 @@ function createCard(order) {
             <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:12px;"></i> ${order.customer_address || 'N/A'}</span>
             ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:600;"><i data-lucide="info" style="width:12px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
             ${order.payment_account ? `<span style="color:#059669; font-weight:600;"><i data-lucide="building-2" style="width:12px;"></i> ${order.payment_account}</span>` : ''}
-            ${order.notes && !order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#9333ea; font-style:italic;"><i data-lucide="sticky-note" style="width:12px;"></i> Có ghi chú</span>` : ''}
         </div>
         <div class="card-tag tag-amount" style="${order.status === 'lost' ? 'background:#fee2e2; color:#991b1b;' : ''}">${formatVND(order.amount || 0)}</div>
         <div class="card-actions">
@@ -69,10 +69,10 @@ function createCard(order) {
         </div>
     `;
 
-    card.querySelector('.move-btn').addEventListener('click', (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived'); });
-    card.querySelector('.lost-btn').addEventListener('click', (e) => { e.stopPropagation(); handleStatusMove(order.id, 'lost'); });
-    card.querySelector('.view-btn').addEventListener('click', (e) => { e.stopPropagation(); showDetails(order); });
-    card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteOrder(order.id); });
+    card.querySelector('.move-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived'); };
+    card.querySelector('.lost-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, 'lost'); };
+    card.querySelector('.view-btn').onclick = (e) => { e.stopPropagation(); showDetails(order); };
+    card.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); deleteOrder(order.id); };
 
     return card;
 }
@@ -85,7 +85,6 @@ function showDetails(order) {
             <p><strong>Khách hàng:</strong> ${order.customer_name}</p>
             <p><strong>SĐT:</strong> ${order.customer_phone || 'N/A'}</p>
             <p><strong>Địa chỉ:</strong> ${order.customer_address || 'N/A'}</p>
-            <p><strong>Trạng thái:</strong> ${STATUS_MAP[order.status] || 'N/A'}</p>
             <hr>
             <textarea id="order-notes" style="width:100%; height:60px; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Ghi chú...">${order.notes || ''}</textarea>
             <button class="save-notes-btn" style="padding:8px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">Lưu ghi chú</button>
@@ -94,7 +93,7 @@ function showDetails(order) {
             <p><strong>Tổng cộng:</strong> <span style="font-weight:800; color:#166534;">${formatVND(order.amount || 0)}</span></p>
         </div>
     `;
-    document.querySelector('.save-notes-btn').addEventListener('click', () => updateNotes(order.id, document.getElementById('order-notes').value));
+    document.querySelector('.save-notes-btn').onclick = () => updateNotes(order.id, document.getElementById('order-notes').value);
     modal.classList.add('active');
 }
 
@@ -144,16 +143,6 @@ async function openCustomerList() {
     document.getElementById('customer-modal').classList.add('active');
 }
 
-function exportToExcel() {
-    const rows = document.getElementById('customer-table-body').querySelectorAll('tr');
-    let csv = '\uFEFFHọ tên,Số điện thoại,Địa chỉ,Tổng mua,Số đơn\n';
-    rows.forEach(row => { csv += Array.from(row.querySelectorAll('td')).map(c => `"${c.innerText.replace(/"/g, '""')}"`).join(',') + '\n'; });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `Khach_hang_${new Date().toLocaleDateString('vi-VN')}.csv`;
-    link.click();
-}
-
 async function openDashboard() {
     const orders = await fetchOrders();
     const yFilter = document.getElementById('year-filter');
@@ -168,21 +157,21 @@ async function openDashboard() {
     const activeDebt = active.filter(o => o.status === 'debt').reduce((s, o) => s + parseFloat(o.amount || 0), 0);
     
     document.getElementById('active-account-stats').innerHTML = `
-        <div style="flex:1; text-align:center; border-right:1px solid #eee;"><div>TỔNG DOANH SỐ HIỆN TẠI</div><strong>${formatVND(activeData.totalRevenue)}</strong></div>
-        <div style="flex:2; display:flex; justify-content:space-around;">
-            <div>CÔNG TY<br><span style="color:#2563eb; font-weight:700;">${formatVND(activeData.accountMap['Công ty'])}</span></div>
-            <div>THANH<br><span style="color:#059669; font-weight:700;">${formatVND(activeData.accountMap['Thanh'])}</span></div>
-            <div style="color:red;">ĐANG NỢ<br><strong>${formatVND(activeDebt)}</strong></div>
+        <div style="display:flex; justify-content:space-around; margin-bottom:20px; background:#eff6ff; padding:15px; border-radius:12px;">
+            <div style="text-align:center;"><div>TỔNG DOANH SỐ</div><strong>${formatVND(activeData.totalRevenue)}</strong></div>
+            <div style="text-align:center;">CÔNG TY<br><span style="color:#2563eb; font-weight:700;">${formatVND(activeData.accountMap['Công ty'])}</span></div>
+            <div style="text-align:center;">THANH<br><span style="color:#059669; font-weight:700;">${formatVND(activeData.accountMap['Thanh'])}</span></div>
+            <div style="text-align:center; color:red;">ĐANG NỢ<br><strong>${formatVND(activeDebt)}</strong></div>
         </div>
     `;
 
     const archived = orders.filter(o => { const d = new Date(o.created_at); return o.status === 'archived' && d.getFullYear().toString() === year && (month === 'all' ? true : d.getMonth().toString() === month); });
     const archData = calculateStats(archived);
     document.getElementById('archived-account-stats').innerHTML = `
-        <div style="flex:1; text-align:center; border-right:1px solid #eee;"><div>TỔNG LỊCH SỬ HOÀN THÀNH</div><strong>${formatVND(archData.totalRevenue)}</strong></div>
-        <div style="flex:1; display:flex; justify-content:space-around;">
-            <div>CÔNG TY<br><strong>${formatVND(archData.accountMap['Công ty'])}</strong></div>
-            <div>THANH<br><strong>${formatVND(archData.accountMap['Thanh'])}</strong></div>
+        <div style="display:flex; justify-content:space-around; margin-bottom:20px; background:#f5f3ff; padding:15px; border-radius:12px;">
+            <div style="text-align:center;"><div>TỔNG LỊCH SỬ</div><strong>${formatVND(archData.totalRevenue)}</strong></div>
+            <div style="text-align:center;">CÔNG TY<br><strong>${formatVND(archData.accountMap['Công ty'])}</strong></div>
+            <div style="text-align:center;">THANH<br><strong>${formatVND(archData.accountMap['Thanh'])}</strong></div>
         </div>
     `;
 
@@ -246,10 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-btn').onclick = handleLogin;
     document.getElementById('pass-input').onkeypress = (e) => { if (e.key === 'Enter') handleLogin(); };
     document.getElementById('logout-btn').onclick = () => { localStorage.removeItem('crm_auth'); location.reload(); };
-    document.getElementById('refresh-btn').onclick = renderBoard;
     document.getElementById('dashboard-btn').onclick = openDashboard;
     document.getElementById('customer-btn').onclick = openCustomerList;
-    document.getElementById('export-btn').onclick = exportToExcel;
     document.getElementById('search-input').oninput = applySearch;
     document.getElementById('month-filter').onchange = openDashboard;
     document.getElementById('year-filter').onchange = openDashboard;
@@ -257,14 +244,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-account').forEach(btn => {
         btn.onclick = () => {
             if (currentMoveData) {
-                updateOrderStatus(currentMoveData.id, currentMoveData.status, false, { payment_account: btn.dataset.account });
+                updateOrderStatus(currentMoveData.id, currentMoveData.status, false, { payment_account: btn.innerText });
                 document.getElementById('payment-modal').classList.remove('active');
                 currentMoveData = null;
             }
         };
     });
 
-    let selectedLostReason = "";
     document.querySelectorAll('.btn-lost-reason').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.btn-lost-reason').forEach(b => b.classList.remove('active'));
@@ -288,6 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    document.querySelectorAll('.close-btn').forEach(b => b.onclick = () => document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')));
+    document.querySelectorAll('.modal-close-trigger').forEach(b => {
+        b.onclick = () => {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            if (currentMoveData && currentMoveData.status === 'lost') renderBoard(); // Reset if cancelled
+        };
+    });
+
     window.onclick = (e) => { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); };
 });
