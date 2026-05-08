@@ -55,16 +55,16 @@ function createCard(order) {
     card.innerHTML = `
         <div class="card-title">${order.customer_name || 'N/A'}</div>
         <div class="card-meta">
-            <span><i data-lucide="phone" style="width:12px;"></i> ${order.customer_phone || 'N/A'}</span>
-            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:12px;"></i> ${order.customer_address || 'N/A'}</span>
-            ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:600;"><i data-lucide="info" style="width:12px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
-            ${order.payment_account ? `<span style="color:#059669; font-weight:600;"><i data-lucide="building-2" style="width:12px;"></i> ${order.payment_account}</span>` : ''}
+            <span><i data-lucide="phone" style="width:14px;"></i> ${order.customer_phone || 'N/A'}</span>
+            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:14px;"></i> ${order.customer_address || 'N/A'}</span>
+            ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:700;"><i data-lucide="info" style="width:14px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
+            ${order.payment_account ? `<span style="color:#059669; font-weight:700;"><i data-lucide="building-2" style="width:14px;"></i> ${order.payment_account}</span>` : ''}
         </div>
-        <div class="card-tag tag-amount" style="${order.status === 'lost' ? 'background:#fee2e2; color:#991b1b;' : ''}">${formatVND(order.amount || 0)}</div>
+        <div class="card-tag tag-amount" style="${order.status === 'lost' ? 'background:#fee2e2; color:#991b1b; border-color:#fecaca;' : ''}">${formatVND(order.amount || 0)}</div>
         <div class="card-actions">
-            <button class="action-btn move-btn"><i data-lucide="arrow-right-circle"></i></button>
-            <button class="action-btn view-btn"><i data-lucide="eye"></i></button>
-            <button class="action-btn lost-btn" style="color:#ef4444;" title="Rớt đơn"><i data-lucide="thumbs-down"></i></button>
+            <button class="action-btn move-btn" title="Chuyển tiếp"><i data-lucide="arrow-right-circle"></i></button>
+            <button class="action-btn view-btn" title="Xem"><i data-lucide="eye"></i></button>
+            <button class="action-btn lost-btn" style="color:#ef4444;" title="Rớt"><i data-lucide="thumbs-down"></i></button>
             <button class="action-btn delete-btn" style="color:#ef4444;"><i data-lucide="trash-2"></i></button>
         </div>
     `;
@@ -81,16 +81,16 @@ function showDetails(order) {
     const modal = document.getElementById('detail-modal');
     document.getElementById('modal-title').innerText = `Chi tiết: ${order.customer_name}`;
     document.getElementById('modal-body').innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; flex-direction:column; gap:12px;">
             <p><strong>Khách hàng:</strong> ${order.customer_name}</p>
-            <p><strong>SĐT:</strong> ${order.customer_phone || 'N/A'}</p>
+            <p><strong>SĐT:</strong> <a href="tel:${order.customer_phone}" style="color:#2563eb; font-weight:700;">${order.customer_phone || 'N/A'}</a></p>
             <p><strong>Địa chỉ:</strong> ${order.customer_address || 'N/A'}</p>
             <hr>
-            <textarea id="order-notes" style="width:100%; height:60px; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Ghi chú...">${order.notes || ''}</textarea>
-            <button class="save-notes-btn" style="padding:8px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">Lưu ghi chú</button>
+            <textarea id="order-notes" style="width:100%; height:80px; padding:12px; border-radius:10px; border:1px solid #ddd; font-family:inherit;" placeholder="Ghi chú thêm...">${order.notes || ''}</textarea>
+            <button class="save-notes-btn" style="padding:12px; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Lưu ghi chú</button>
             <hr>
-            <p><strong>Sản phẩm:</strong><br><small>${order.products || 'N/A'}</small></p>
-            <p><strong>Tổng cộng:</strong> <span style="font-weight:800; color:#166534;">${formatVND(order.amount || 0)}</span></p>
+            <p><strong>Sản phẩm:</strong><br><small style="color:#64748b; line-height:1.4;">${order.products || 'N/A'}</small></p>
+            <p style="font-size:1.2rem; font-weight:800; color:#166534; display:flex; justify-content:space-between;"><span>TỔNG:</span> <span>${formatVND(order.amount || 0)}</span></p>
         </div>
     `;
     document.querySelector('.save-notes-btn').onclick = () => updateNotes(order.id, document.getElementById('order-notes').value);
@@ -130,18 +130,14 @@ async function openCustomerList() {
     const orders = await fetchOrders();
     const customers = {};
     orders.forEach(o => {
-        // Đã bỏ bộ lọc o.status === 'lost', lưu TẤT CẢ khách hàng
         const key = o.customer_phone || o.customer_name;
         if (!customers[key]) customers[key] = { name: o.customer_name, phone: o.customer_phone, address: o.customer_address, total: 0, count: 0 };
-        // Chỉ cộng tiền vào "Tổng mua" nếu đơn hàng đã được trả (paid, archived, debt)
-        if (o.status !== 'lost' && o.status !== 'quote') {
-            customers[key].total += parseFloat(o.amount || 0);
-        }
+        if (o.status !== 'lost' && o.status !== 'quote') customers[key].total += parseFloat(o.amount || 0);
         customers[key].count += 1;
     });
     const tbody = document.getElementById('customer-table-body');
     tbody.innerHTML = Object.values(customers).sort((a,b) => b.total - a.total).map(c => `
-        <tr><td style="font-weight:600;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.8rem; max-width:150px;">${c.address || 'N/A'}</td><td style="font-weight:700; color:#166534;">${formatVND(c.total)}</td><td>${c.count}</td></tr>
+        <tr><td style="font-weight:700;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.75rem;">${c.address || 'N/A'}</td><td style="font-weight:800; color:#166534;">${formatVND(c.total)}</td><td style="text-align:center;">${c.count}</td></tr>
     `).join('');
     document.getElementById('customer-modal').classList.add('active');
 }
@@ -160,8 +156,8 @@ async function openDashboard() {
     const activeDebt = active.filter(o => o.status === 'debt').reduce((s, o) => s + parseFloat(o.amount || 0), 0);
     
     document.getElementById('active-account-stats').innerHTML = `
-        <div style="display:flex; justify-content:space-around; margin-bottom:20px; background:#eff6ff; padding:15px; border-radius:12px;">
-            <div style="text-align:center;"><div>TỔNG DOANH SỐ</div><strong>${formatVND(activeData.totalRevenue)}</strong></div>
+        <div style="display:flex; justify-content:space-around; gap:10px; margin-bottom:20px; background:#eff6ff; padding:15px; border-radius:12px; flex-wrap:wrap;">
+            <div style="text-align:center; min-width:120px;"><div>TỔNG DOANH SỐ</div><strong>${formatVND(activeData.totalRevenue)}</strong></div>
             <div style="text-align:center;">CÔNG TY<br><span style="color:#2563eb; font-weight:700;">${formatVND(activeData.accountMap['Công ty'])}</span></div>
             <div style="text-align:center;">THANH<br><span style="color:#059669; font-weight:700;">${formatVND(activeData.accountMap['Thanh'])}</span></div>
             <div style="text-align:center; color:red;">ĐANG NỢ<br><strong>${formatVND(activeDebt)}</strong></div>
@@ -171,8 +167,8 @@ async function openDashboard() {
     const archived = orders.filter(o => { const d = new Date(o.created_at); return o.status === 'archived' && d.getFullYear().toString() === year && (month === 'all' ? true : d.getMonth().toString() === month); });
     const archData = calculateStats(archived);
     document.getElementById('archived-account-stats').innerHTML = `
-        <div style="display:flex; justify-content:space-around; margin-bottom:20px; background:#f5f3ff; padding:15px; border-radius:12px;">
-            <div style="text-align:center;"><div>TỔNG LỊCH SỬ</div><strong>${formatVND(archData.totalRevenue)}</strong></div>
+        <div style="display:flex; justify-content:space-around; gap:10px; margin-bottom:20px; background:#f5f3ff; padding:15px; border-radius:12px; flex-wrap:wrap;">
+            <div style="text-align:center; min-width:120px;"><div>TỔNG LỊCH SỬ</div><strong>${formatVND(archData.totalRevenue)}</strong></div>
             <div style="text-align:center;">CÔNG TY<br><strong>${formatVND(archData.accountMap['Công ty'])}</strong></div>
             <div style="text-align:center;">THANH<br><strong>${formatVND(archData.accountMap['Thanh'])}</strong></div>
         </div>
@@ -214,7 +210,9 @@ function handleLogin() {
 function initDragAndDrop() {
     document.querySelectorAll('.cards-container').forEach(container => {
         new Sortable(container, {
-            group: 'shared', animation: 150,
+            group: 'shared', animation: 200,
+            delay: 150, delayOnTouchOnly: true, // Kích hoạt Long Press cho mobile
+            touchStartThreshold: 5,
             onEnd: async (evt) => {
                 const id = evt.item.dataset.id;
                 const newStatus = evt.to.closest('.column').dataset.status;
