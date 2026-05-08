@@ -55,23 +55,32 @@ function createCard(order) {
     card.innerHTML = `
         <div class="card-title">${order.customer_name || 'N/A'}</div>
         <div class="card-meta">
-            <span><i data-lucide="phone" style="width:14px;"></i> ${order.customer_phone || 'N/A'}</span>
-            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:14px;"></i> ${order.customer_address || 'N/A'}</span>
-            ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:700;"><i data-lucide="info" style="width:14px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
-            ${order.payment_account ? `<span style="color:#059669; font-weight:700;"><i data-lucide="building-2" style="width:14px;"></i> ${order.payment_account}</span>` : ''}
+            <span><i data-lucide="phone" style="width:12px;"></i> ${order.customer_phone || 'N/A'}</span>
+            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:12px;"></i> ${order.customer_address || 'N/A'}</span>
+            ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:700;"><i data-lucide="info" style="width:12px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
+            ${order.payment_account ? `<span style="color:#059669; font-weight:700;"><i data-lucide="building-2" style="width:12px;"></i> ${order.payment_account}</span>` : ''}
         </div>
         <div class="card-tag tag-amount" style="${order.status === 'lost' ? 'background:#fee2e2; color:#991b1b; border-color:#fecaca;' : ''}">${formatVND(order.amount || 0)}</div>
         <div class="card-actions">
             <button class="action-btn move-btn" title="Chuyển tiếp"><i data-lucide="arrow-right-circle"></i></button>
-            <button class="action-btn view-btn" title="Xem"><i data-lucide="eye"></i></button>
-            <button class="action-btn lost-btn" style="color:#ef4444;" title="Rớt"><i data-lucide="thumbs-down"></i></button>
-            <button class="action-btn delete-btn" style="color:#ef4444;"><i data-lucide="trash-2"></i></button>
+            <button class="action-btn delete-btn" style="color:#ef4444;" title="Xóa"><i data-lucide="trash-2"></i></button>
         </div>
     `;
 
+    // Nhấn đúp để xem chi tiết
+    let lastTap = 0;
+    card.addEventListener('touchend', (e) => {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
+            showDetails(order);
+        }
+        lastTap = currentTime;
+    });
+    card.ondblclick = () => showDetails(order);
+
     card.querySelector('.move-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived'); };
-    card.querySelector('.lost-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, 'lost'); };
-    card.querySelector('.view-btn').onclick = (e) => { e.stopPropagation(); showDetails(order); };
     card.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); deleteOrder(order.id); };
 
     return card;
@@ -213,9 +222,9 @@ function initDragAndDrop() {
             group: 'shared', animation: 250,
             delay: 150, delayOnTouchOnly: true,
             touchStartThreshold: 5,
-            forceFallback: true, // Ép trình duyệt dùng logic kéo thả tùy biến để mượt hơn
-            fallbackOnBody: true, // Đưa thẻ ra ngoài body khi kéo để không bị che khuất
-            swapThreshold: 0.65, // Nhạy hơn khi chuyển cột
+            forceFallback: true,
+            fallbackOnBody: true,
+            swapThreshold: 0.65,
             ghostClass: 'sortable-ghost',
             dragClass: 'sortable-drag',
             onEnd: async (evt) => {

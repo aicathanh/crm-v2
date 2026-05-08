@@ -38,15 +38,16 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-app); color:
 .total-amount { font-size: 0.85rem; font-weight: 800; color: #166534; background: #dcfce7; padding: 4px 10px; border-radius: 8px; display: inline-block; }
 
 .cards-container { flex: 1; overflow-y: auto; padding: 0 10px 16px 10px; display: flex; flex-direction: column; gap: 10px; min-height: 100px; }
-.card { background: white; padding: 14px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid #f1f5f9; position: relative; touch-action: manipulation; }
-.card-title { font-size: 1rem; font-weight: 800; margin-bottom: 6px; color: #1e293b; }
-.card-meta { font-size: 0.75rem; color: #64748b; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.card { background: white; padding: 14px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid #f1f5f9; position: relative; touch-action: manipulation; user-select: none; }
+.card-title { font-size: 1rem; font-weight: 800; margin-bottom: 6px; color: #1e293b; pointer-events: none; }
+.card-meta { font-size: 0.75rem; color: #64748b; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; pointer-events: none; }
 .card-meta span { display: flex; align-items: center; gap: 6px; }
-.card-tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; font-weight: 800; }
+.card-tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; font-weight: 800; pointer-events: none; }
 .tag-amount { background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
 
-.card-actions { margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px; }
-.action-btn { background: #f8fafc; border: 1px solid #e2e8f0; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.card-actions { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; }
+.action-btn { background: #f8fafc; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.action-btn svg { width: 14px !important; height: 14px !important; }
 
 /* Drag and Drop Effects */
 .sortable-ghost { opacity: 0.4; background: var(--primary-light) !important; border: 2px dashed var(--primary-color) !important; }
