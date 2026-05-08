@@ -14,6 +14,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'Inter', sans-serif; background-color: var(--bg-app); color: var(--text-main); line-height: 1.5; }
+.hidden { display: none !important; }
 
 /* Layout */
 .app-layout { display: flex; flex-direction: column; height: 100vh; }
