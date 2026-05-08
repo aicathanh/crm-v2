@@ -210,9 +210,14 @@ function handleLogin() {
 function initDragAndDrop() {
     document.querySelectorAll('.cards-container').forEach(container => {
         new Sortable(container, {
-            group: 'shared', animation: 200,
-            delay: 150, delayOnTouchOnly: true, // Kích hoạt Long Press cho mobile
+            group: 'shared', animation: 250,
+            delay: 150, delayOnTouchOnly: true,
             touchStartThreshold: 5,
+            forceFallback: true, // Ép trình duyệt dùng logic kéo thả tùy biến để mượt hơn
+            fallbackOnBody: true, // Đưa thẻ ra ngoài body khi kéo để không bị che khuất
+            swapThreshold: 0.65, // Nhạy hơn khi chuyển cột
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
             onEnd: async (evt) => {
                 const id = evt.item.dataset.id;
                 const newStatus = evt.to.closest('.column').dataset.status;
@@ -252,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    let selectedLostReason = "";
     document.querySelectorAll('.btn-lost-reason').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.btn-lost-reason').forEach(b => b.classList.remove('active'));
