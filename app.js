@@ -254,8 +254,8 @@ function initDragAndDrop() {
             ghostClass: 'sortable-ghost',
             dragClass: 'sortable-drag',
             scroll: true,
-            scrollSensitivity: 100,
-            scrollSpeed: 20,
+            scrollSensitivity: 60,
+            scrollSpeed: 10,
             onStart: () => board.classList.add('dragging'),
             onEnd: async (evt) => {
                 board.classList.remove('dragging');
