@@ -90,7 +90,10 @@ function showDetails(order) {
     document.getElementById('modal-body').innerHTML = `
         <div style="display:flex; flex-direction:column; gap:12px;">
             <p><strong>Khách hàng:</strong> ${order.customer_name}</p>
-            <p><strong>SĐT:</strong> <a href="tel:${order.customer_phone}" style="color:#2563eb; font-weight:700;">${order.customer_phone || 'N/A'}</a></p>
+            <p><strong>SĐT:</strong> 
+                <a href="tel:${order.customer_phone}" style="color:#2563eb; font-weight:700;">${order.customer_phone || 'N/A'}</a>
+                <a href="https://zalo.me/${order.customer_phone ? order.customer_phone.replace(/[^0-9]/g, '') : ''}" target="_blank" style="margin-left:8px; padding:3px 10px; background:#0068ff; color:white; border-radius:8px; font-size:0.7rem; text-decoration:none; font-weight:800; display:inline-flex; align-items:center;">Zalo</a>
+            </p>
             <p><strong>Địa chỉ:</strong> ${order.customer_address || 'N/A'}</p>
             <hr>
             <textarea id="order-notes" style="width:100%; height:80px; padding:12px; border-radius:10px; border:1px solid #ddd; font-family:inherit;" placeholder="Ghi chú thêm...">${order.notes || ''}</textarea>
