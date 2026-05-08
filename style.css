@@ -57,7 +57,22 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-app); color:
 /* Responsive Mobile */
 @media (max-width: 600px) {
     .logo span { display: none; }
-    .search-bar { max-width: 120px; padding: 6px 8px; }
+    .search-bar { 
+        max-width: 80px; 
+        padding: 6px 8px; 
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    .search-bar:focus-within {
+        max-width: calc(100% - 32px);
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        background: white;
+        z-index: 110;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        border: 1px solid var(--primary-color);
+    }
     .header-actions { gap: 4px; }
     .btn-icon span { display: none; }
     .btn-icon { padding: 8px; }
