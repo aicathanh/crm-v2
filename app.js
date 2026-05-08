@@ -130,10 +130,13 @@ async function openCustomerList() {
     const orders = await fetchOrders();
     const customers = {};
     orders.forEach(o => {
-        if (o.status === 'lost') return;
+        // Đã bỏ bộ lọc o.status === 'lost', lưu TẤT CẢ khách hàng
         const key = o.customer_phone || o.customer_name;
         if (!customers[key]) customers[key] = { name: o.customer_name, phone: o.customer_phone, address: o.customer_address, total: 0, count: 0 };
-        customers[key].total += parseFloat(o.amount || 0);
+        // Chỉ cộng tiền vào "Tổng mua" nếu đơn hàng đã được trả (paid, archived, debt)
+        if (o.status !== 'lost' && o.status !== 'quote') {
+            customers[key].total += parseFloat(o.amount || 0);
+        }
         customers[key].count += 1;
     });
     const tbody = document.getElementById('customer-table-body');
@@ -251,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
+    let selectedLostReason = "";
     document.querySelectorAll('.btn-lost-reason').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.btn-lost-reason').forEach(b => b.classList.remove('active'));
@@ -277,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-close-trigger').forEach(b => {
         b.onclick = () => {
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            if (currentMoveData && currentMoveData.status === 'lost') renderBoard(); // Reset if cancelled
+            if (currentMoveData && currentMoveData.status === 'lost') renderBoard();
         };
     });
 
