@@ -3,7 +3,7 @@ const supabaseKey = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
 const client = supabase.createClient(supabaseUrl, supabaseKey);
 
 const STATUS_MAP = { 'quote': 'Báo Giá', 'ordered': 'Chốt Đơn', 'paid': 'Thu Tiền', 'debt': 'Công Nợ', 'archived': 'Lưu Trữ', 'lost': 'Rớt Đơn' };
-const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'paid', 'archived': 'quote', 'lost': 'quote' };
+const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'archived', 'archived': 'quote', 'lost': 'quote' };
 
 let currentMoveData = null;
 let selectedLostReason = "";
@@ -34,8 +34,9 @@ async function deleteOrder(id) {
     if (confirm('Xóa báo giá này?')) { await client.from('orders').delete().eq('id', id); renderBoard(); }
 }
 
-function handleStatusMove(id, newStatus) {
-    if (newStatus === 'paid') {
+function handleStatusMove(id, newStatus, currentStatus = '') {
+    // Nếu chuyển từ Công nợ -> Lưu trữ HOẶC Chốt đơn -> Thu tiền thì đều hỏi tài khoản
+    if (newStatus === 'paid' || (currentStatus === 'debt' && newStatus === 'archived')) {
         currentMoveData = { id, status: newStatus };
         document.getElementById('payment-modal').classList.add('active');
     } else if (newStatus === 'lost') {
@@ -48,6 +49,7 @@ function createCard(order) {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = order.id;
+    card.dataset.status = order.status; // Lưu status hiện tại để xử lý logic
     card.dataset.amount = order.amount || 0;
     card.dataset.name = (order.customer_name || '').toLowerCase();
     card.dataset.phone = (order.customer_phone || '').toLowerCase();
@@ -67,20 +69,16 @@ function createCard(order) {
         </div>
     `;
 
-    // Nhấn đúp để xem chi tiết
     let lastTap = 0;
     card.addEventListener('touchend', (e) => {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-            e.preventDefault();
-            showDetails(order);
-        }
+        if (tapLength < 300 && tapLength > 0) { e.preventDefault(); showDetails(order); }
         lastTap = currentTime;
     });
     card.ondblclick = () => showDetails(order);
 
-    card.querySelector('.move-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived'); };
+    card.querySelector('.move-btn').onclick = (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived', order.status); };
     card.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); deleteOrder(order.id); };
 
     return card;
@@ -232,8 +230,15 @@ function initDragAndDrop() {
                 const newStatus = evt.to.closest('.column').dataset.status;
                 const oldStatus = evt.from.closest('.column').dataset.status;
                 if (newStatus !== oldStatus) {
-                    if (newStatus === 'paid') { currentMoveData = { id, status: newStatus }; document.getElementById('payment-modal').classList.add('active'); }
-                    else if (newStatus === 'lost') { currentMoveData = { id, status: newStatus }; document.getElementById('lost-reason-modal').classList.add('active'); }
+                    // CẬP NHẬT: Thêm logic hỏi tài khoản khi từ Công nợ -> Lưu trữ
+                    if (newStatus === 'paid' || (oldStatus === 'debt' && newStatus === 'archived')) {
+                        currentMoveData = { id, status: newStatus };
+                        document.getElementById('payment-modal').classList.add('active');
+                    }
+                    else if (newStatus === 'lost') {
+                        currentMoveData = { id, status: newStatus };
+                        document.getElementById('lost-reason-modal').classList.add('active');
+                    }
                     else { await updateOrderStatus(id, newStatus, true); }
                     updateColumnStats();
                 }
@@ -292,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-close-trigger').forEach(b => {
         b.onclick = () => {
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            if (currentMoveData && currentMoveData.status === 'lost') renderBoard();
+            if (currentMoveData && (currentMoveData.status === 'lost' || currentMoveData.status === 'archived')) renderBoard();
         };
     });
 
