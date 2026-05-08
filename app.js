@@ -2,11 +2,11 @@ const supabaseUrl = 'https://zbnnctvggpupdnjmydcu.supabase.co';
 const supabaseKey = 'sb_publishable__Uc7k0lfdHFzBjWT-3o36w_ydCDXOT8';
 const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-const STATUS_MAP = { 'quote': 'Báo Giá', 'ordered': 'Chốt Đơn', 'paid': 'Thu Tiền', 'debt': 'Công Nợ', 'archived': 'Lưu Trữ' };
-const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'paid', 'archived': 'quote' };
+const STATUS_MAP = { 'quote': 'Báo Giá', 'ordered': 'Chốt Đơn', 'paid': 'Thu Tiền', 'debt': 'Công Nợ', 'archived': 'Lưu Trữ', 'lost': 'Rớt Đơn' };
+const NEXT_STATUS = { 'quote': 'ordered', 'ordered': 'paid', 'paid': 'archived', 'debt': 'paid', 'archived': 'quote', 'lost': 'quote' };
 
 let currentMoveData = null;
-const THE_PASSWORD = "6688"; // Mật khẩu truy cập
+const THE_PASSWORD = "6688";
 
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
@@ -37,6 +37,9 @@ function handleStatusMove(id, newStatus) {
     if (newStatus === 'paid') {
         currentMoveData = { id, status: newStatus };
         document.getElementById('payment-modal').classList.add('active');
+    } else if (newStatus === 'lost') {
+        currentMoveData = { id, status: newStatus };
+        document.getElementById('lost-reason-modal').classList.add('active');
     } else updateOrderStatus(id, newStatus);
 }
 
@@ -53,18 +56,21 @@ function createCard(order) {
         <div class="card-meta">
             <span><i data-lucide="phone" style="width:12px;"></i> ${order.customer_phone || 'N/A'}</span>
             <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i data-lucide="map-pin" style="width:12px;"></i> ${order.customer_address || 'N/A'}</span>
+            ${order.status === 'lost' && order.notes && order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#ef4444; font-weight:600;"><i data-lucide="info" style="width:12px;"></i> ${order.notes.split('LÝ DO RỚT:')[1]}</span>` : ''}
             ${order.payment_account ? `<span style="color:#059669; font-weight:600;"><i data-lucide="building-2" style="width:12px;"></i> ${order.payment_account}</span>` : ''}
-            ${order.notes ? `<span style="color:#9333ea; font-style:italic;"><i data-lucide="sticky-note" style="width:12px;"></i> Có ghi chú</span>` : ''}
+            ${order.notes && !order.notes.includes('LÝ DO RỚT:') ? `<span style="color:#9333ea; font-style:italic;"><i data-lucide="sticky-note" style="width:12px;"></i> Có ghi chú</span>` : ''}
         </div>
-        <div class="card-tag tag-amount">${formatVND(order.amount || 0)}</div>
+        <div class="card-tag tag-amount" style="${order.status === 'lost' ? 'background:#fee2e2; color:#991b1b;' : ''}">${formatVND(order.amount || 0)}</div>
         <div class="card-actions">
             <button class="action-btn move-btn"><i data-lucide="arrow-right-circle"></i></button>
             <button class="action-btn view-btn"><i data-lucide="eye"></i></button>
+            <button class="action-btn lost-btn" style="color:#ef4444;" title="Rớt đơn"><i data-lucide="thumbs-down"></i></button>
             <button class="action-btn delete-btn" style="color:#ef4444;"><i data-lucide="trash-2"></i></button>
         </div>
     `;
 
     card.querySelector('.move-btn').addEventListener('click', (e) => { e.stopPropagation(); handleStatusMove(order.id, NEXT_STATUS[order.status] || 'archived'); });
+    card.querySelector('.lost-btn').addEventListener('click', (e) => { e.stopPropagation(); handleStatusMove(order.id, 'lost'); });
     card.querySelector('.view-btn').addEventListener('click', (e) => { e.stopPropagation(); showDetails(order); });
     card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteOrder(order.id); });
 
@@ -79,7 +85,7 @@ function showDetails(order) {
             <p><strong>Khách hàng:</strong> ${order.customer_name}</p>
             <p><strong>SĐT:</strong> ${order.customer_phone || 'N/A'}</p>
             <p><strong>Địa chỉ:</strong> ${order.customer_address || 'N/A'}</p>
-            <p><strong>Tài khoản:</strong> ${order.payment_account || 'N/A'}</p>
+            <p><strong>Trạng thái:</strong> ${STATUS_MAP[order.status] || 'N/A'}</p>
             <hr>
             <textarea id="order-notes" style="width:100%; height:60px; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Ghi chú...">${order.notes || ''}</textarea>
             <button class="save-notes-btn" style="padding:8px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">Lưu ghi chú</button>
@@ -125,6 +131,7 @@ async function openCustomerList() {
     const orders = await fetchOrders();
     const customers = {};
     orders.forEach(o => {
+        if (o.status === 'lost') return;
         const key = o.customer_phone || o.customer_name;
         if (!customers[key]) customers[key] = { name: o.customer_name, phone: o.customer_phone, address: o.customer_address, total: 0, count: 0 };
         customers[key].total += parseFloat(o.amount || 0);
@@ -132,10 +139,9 @@ async function openCustomerList() {
     });
     const tbody = document.getElementById('customer-table-body');
     tbody.innerHTML = Object.values(customers).sort((a,b) => b.total - a.total).map(c => `
-        <tr><td style="font-weight:600;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.8rem; max-width:200px;">${c.address || 'N/A'}</td><td style="font-weight:700; color:#166534;">${formatVND(c.total)}</td><td style="text-align:center;">${c.count}</td></tr>
+        <tr><td style="font-weight:600;">${c.name}</td><td>${c.phone || 'N/A'}</td><td style="font-size:0.8rem; max-width:150px;">${c.address || 'N/A'}</td><td style="font-weight:700; color:#166534;">${formatVND(c.total)}</td><td>${c.count}</td></tr>
     `).join('');
     document.getElementById('customer-modal').classList.add('active');
-    lucide.createIcons();
 }
 
 function exportToExcel() {
@@ -200,7 +206,6 @@ function renderStatList(id, data) {
     document.getElementById(id).innerHTML = data.map(([n, v]) => `<div class="stat-item"><span>${n}</span><span class="stat-val">${formatVND(v)}</span></div>`).join('') || 'Trống';
 }
 
-// SECURITY LOGIC
 function checkAuth() {
     if (localStorage.getItem('crm_auth') === 'true') {
         document.getElementById('login-overlay').style.display = 'none';
@@ -210,28 +215,37 @@ function checkAuth() {
 }
 
 function handleLogin() {
-    const input = document.getElementById('pass-input').value;
-    if (input === THE_PASSWORD) {
-        localStorage.setItem('crm_auth', 'true');
-        checkAuth();
-    } else {
-        document.getElementById('login-err').style.display = 'block';
-    }
+    if (document.getElementById('pass-input').value === THE_PASSWORD) { localStorage.setItem('crm_auth', 'true'); checkAuth(); }
+    else { document.getElementById('login-err').style.display = 'block'; }
 }
 
-function handleLogout() {
-    localStorage.removeItem('crm_auth');
-    location.reload();
+function initDragAndDrop() {
+    document.querySelectorAll('.cards-container').forEach(container => {
+        new Sortable(container, {
+            group: 'shared', animation: 150,
+            onEnd: async (evt) => {
+                const id = evt.item.dataset.id;
+                const newStatus = evt.to.closest('.column').dataset.status;
+                const oldStatus = evt.from.closest('.column').dataset.status;
+                if (newStatus !== oldStatus) {
+                    if (newStatus === 'paid') { currentMoveData = { id, status: newStatus }; document.getElementById('payment-modal').classList.add('active'); }
+                    else if (newStatus === 'lost') { currentMoveData = { id, status: newStatus }; document.getElementById('lost-reason-modal').classList.add('active'); }
+                    else { await updateOrderStatus(id, newStatus, true); }
+                    updateColumnStats();
+                }
+            }
+        });
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     checkAuth();
+    initDragAndDrop();
 
     document.getElementById('login-btn').onclick = handleLogin;
     document.getElementById('pass-input').onkeypress = (e) => { if (e.key === 'Enter') handleLogin(); };
-    document.getElementById('logout-btn').onclick = handleLogout;
-    
+    document.getElementById('logout-btn').onclick = () => { localStorage.removeItem('crm_auth'); location.reload(); };
     document.getElementById('refresh-btn').onclick = renderBoard;
     document.getElementById('dashboard-btn').onclick = openDashboard;
     document.getElementById('customer-btn').onclick = openCustomerList;
@@ -249,6 +263,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     });
+
+    let selectedLostReason = "";
+    document.querySelectorAll('.btn-lost-reason').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.btn-lost-reason').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedLostReason = btn.dataset.reason;
+        };
+    });
+
+    document.getElementById('submit-lost-reason').onclick = async () => {
+        const reason = document.getElementById('custom-lost-reason').value || selectedLostReason;
+        if (!reason) { alert('Vui lòng chọn hoặc nhập lý do!'); return; }
+        if (currentMoveData) {
+            const orders = await fetchOrders();
+            const order = orders.find(o => o.id == currentMoveData.id);
+            const newNotes = (order.notes ? order.notes + "\n" : "") + "LÝ DO RỚT: " + reason;
+            await updateOrderStatus(currentMoveData.id, 'lost', false, { notes: newNotes });
+            document.getElementById('lost-reason-modal').classList.remove('active');
+            currentMoveData = null;
+            selectedLostReason = "";
+            document.getElementById('custom-lost-reason').value = "";
+        }
+    };
 
     document.querySelectorAll('.close-btn').forEach(b => b.onclick = () => document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')));
     window.onclick = (e) => { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); };
