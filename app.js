@@ -89,6 +89,10 @@ function showDetails(order) {
     document.getElementById('modal-title').innerText = `Chi tiết: ${order.customer_name}`;
     document.getElementById('modal-body').innerHTML = `
         <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#64748b; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+                <span>Số BG: <strong>${order.quote_no || 'N/A'}</strong></span>
+                <span>Ngày: <strong>${new Date(order.created_at).toLocaleDateString('vi-VN')}</strong></span>
+            </div>
             <p><strong>Khách hàng:</strong> ${order.customer_name}</p>
             <p><strong>SĐT:</strong> 
                 <a href="tel:${order.customer_phone}" style="color:#2563eb; font-weight:700;">${order.customer_phone || 'N/A'}</a>
